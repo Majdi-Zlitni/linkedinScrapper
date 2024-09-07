@@ -1,11 +1,16 @@
+import os
+import re
 import time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import requests
+ 
 
 from config import Configuration
+from init import init
 
 config=Configuration()
 class feedPage:
@@ -33,8 +38,30 @@ class feedPage:
             profile_image_url = 'N/A'
 
         try:
+            
             post_content_element = post.find_element(By.CLASS_NAME, 'feed-shared-update-v2__description')
             post_content = post_content_element.text
+            if "…more" in post_content:
+                more_button=post.find_element(By.XPATH, '//div/button/span[contains(text(),\'…more\')]')
+                more_button.click()
+                time.sleep(1)
+                post_content_element = post.find_element(By.CLASS_NAME, 'feed-shared-update-v2__description')
+                post_content = post_content_element.text
+
+        except Exception as e:
+            post_content = 'N/A'
+        
+        try:
+            
+            Additional_post_Link = post.find_element(By.CLASS_NAME, 'feed-shared-update-v2__description')
+            post_content = post_content_element.text
+            if "…more" in post_content:
+                more_button=post.find_element(By.XPATH, '//div/button/span[contains(text(),\'…more\')]')
+                more_button.click()
+                time.sleep(1)
+                post_content_element = post.find_element(By.CLASS_NAME, 'feed-shared-update-v2__description')
+                post_content = post_content_element.text
+
         except Exception as e:
             post_content = 'N/A'
 
@@ -46,7 +73,7 @@ class feedPage:
         scroll_pause_time = 3
         posts = []
         last_height = self.driver.execute_script("return document.body.scrollHeight")
-
+        pattern = r'[^a-zA-Z0-9]'
         while True:
             # Find all posts on the current page
             post_elements = self.driver.find_elements(By.CLASS_NAME, 'feed-shared-update-v2')            
@@ -66,14 +93,45 @@ class feedPage:
             if new_height == last_height:
                 break
             last_height = new_height
-
-        # Print all collected posts
+        
+                
         for post in posts:
+            user_name = post[0].replace(" ","")
+            match = re.search(pattern, user_name)
+            if match:
+                user_name = user_name[:match.start()]            
+            user_path=init.scrapped_data_folder_path+f"\\{user_name}"
+            output_file_path = os.path.join(user_path, f'post_{user_name}.txt')
+            os.makedirs(user_path, exist_ok=True)
+            with open(output_file_path, 'w', encoding='utf-8') as file:
+                user_job_or_followers = "Followers" if post[1].startswith(tuple("0123456789")) else "Job Title"
+                file.write(f"User Name: {post[0]}\n")
+                file.write(f"{user_job_or_followers}: {post[1]}\n")
+                file.write(f"Profile Image URL: {post[2]}\n")
+                file.write(f"Post Content: {post[3]}\n")
+                file.write("-" * 40 + "\n")
+                image_url = post[2]
+                image_file_path = os.path.join(user_path, f'{user_name}.jpg')
+                self.SaveImageToFolder(image_url,image_file_path)
+
             print("User Name:", post[0])
-            print("Job Title:", post[1])
+            print(f"{user_job_or_followers}:", post[1])
             print("Profile Image URL:", post[2])
             print("Post Content:", post[3])
             print("-" * 40)
+
+    def SaveImageToFolder(self,image_url,image_file_path):
+        try:
+            response = requests.get(image_url, stream=True)
+            if response.status_code == 200:
+                with open(image_file_path, 'wb') as img_file:
+                    for chunk in response.iter_content(1024):
+                        img_file.write(chunk)
+                print(f"Profile image saved to {image_file_path}")
+            else:
+                print(f"Failed to download image for")
+        except Exception as e:
+            print(f"An error occurred while downloading the image for: {e}")
 
     def collectDataFromGroup(self):
         self.driver.get(config.linkedInURLGroupURL) 

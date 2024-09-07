@@ -8,6 +8,7 @@ import config
 config=config.Configuration()
 
 class init():
+    scrapped_data_folder_path="./data"
     chrome_driver_path = "./webDriver/chromedriver.exe"
     options = webdriver.ChromeOptions()    
     
