@@ -1,3 +1,4 @@
 linkedin_cookies.pkl
 config.py
 data/*
+!data/
