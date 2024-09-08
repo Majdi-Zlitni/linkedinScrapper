@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from config import Configuration
 
 config=Configuration()
-class profilePage:
+class ProfilePage:
     def __init__(self, driver):
         self.driver = driver
         
